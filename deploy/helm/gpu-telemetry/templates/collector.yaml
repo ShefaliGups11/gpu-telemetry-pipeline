@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-telemetry-collector
+  labels:
+    {{- include "gpu.labels" . | nindent 4 }}
+    app: collector
+spec:
+  replicas: {{ .Values.collector.replicaCount }}
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+        {{- include "gpu.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: collector
+          image: gpu-telemetry/collector:{{ .Values.tag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: BROKER_ADDR
+              value: {{ include "gpu.brokerPeers" . | quote }}
+            - name: METRICS_ADDR
+              value: ":8082"
+            - name: CONSUMER_GROUP
+              value: collectors
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: gpu-telemetry-postgres
+                  key: DATABASE_URL
+          resources:
+            {{- toYaml .Values.collector.resources | nindent 12 }}

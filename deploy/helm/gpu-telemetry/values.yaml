@@ -1,0 +1,53 @@
+imagePullPolicy: IfNotPresent
+tag: dev
+
+postgres:
+  image: postgres:16-alpine
+  user: gpu
+  password: gpu
+  database: gpu
+  pvcSize: 100Mi
+
+broker:
+  replicaCount: 2
+  grpcPort: 9090
+  httpPort: 8081
+  partitions: 8
+  pvcSize: 100Mi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+streamer:
+  replicaCount: 2
+  interval: 200ms
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+collector:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+api:
+  replicaCount: 1
+  httpPort: 8080
+  serviceType: ClusterIP
+  nodePort: 30080
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: gpu-telemetry-streamer
+  labels:
+    {{- include "gpu.labels" . | nindent 4 }}
+    app: streamer
+spec:
+  serviceName: gpu-telemetry-streamer
+  replicas: {{ .Values.streamer.replicaCount }}
+  selector:
+    matchLabels:
+      app: streamer
+  template:
+    metadata:
+      labels:
+        app: streamer
+        {{- include "gpu.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: streamer
+          image: gpu-telemetry/streamer:{{ .Values.tag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: CSV_PATH
+              value: /data/dcgm_metrics.csv
+            - name: BROKER_ADDR
+              value: {{ include "gpu.brokerPeers" . | quote }}
+            - name: METRICS_ADDR
+              value: ":8082"
+            - name: STREAM_INTERVAL
+              value: {{ .Values.streamer.interval | quote }}
+            - name: STREAMER_COUNT
+              value: {{ .Values.streamer.replicaCount | quote }}
+          resources:
+            {{- toYaml .Values.streamer.resources | nindent 12 }}

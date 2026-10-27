@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gpu-telemetry-broker
+  labels:
+    {{- include "gpu.labels" . | nindent 4 }}
+    app: broker
+spec:
+  type: ClusterIP
+  clusterIP: "None"
+  ports:
+    - name: grpc
+      port: {{ .Values.broker.grpcPort }}
+      targetPort: grpc
+    - name: http
+      port: {{ .Values.broker.httpPort }}
+      targetPort: http
+  selector:
+    app: broker
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: gpu-telemetry-broker
+  labels:
+    {{- include "gpu.labels" . | nindent 4 }}
+    app: broker
+spec:
+  serviceName: gpu-telemetry-broker
+  replicas: {{ .Values.broker.replicaCount }}
+  selector:
+    matchLabels:
+      app: broker
+  template:
+    metadata:
+      labels:
+        app: broker
+        {{- include "gpu.labels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.broker.httpPort }}"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: broker
+          image: gpu-telemetry/broker:{{ .Values.tag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: GRPC_ADDR
+              value: ":{{ .Values.broker.grpcPort }}"
+            - name: HTTP_ADDR
+              value: ":{{ .Values.broker.httpPort }}"
+            - name: PARTITIONS
+              value: {{ .Values.broker.partitions | quote }}
+            - name: BROKER_PEERS
+              value: {{ include "gpu.brokerPeers" . | quote }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.broker.grpcPort }}
+            - name: http
+              containerPort: {{ .Values.broker.httpPort }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.broker.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.broker.pvcSize }}

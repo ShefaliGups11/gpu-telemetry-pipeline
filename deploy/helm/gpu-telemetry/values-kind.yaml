@@ -1,0 +1,19 @@
+imagePullPolicy: Never
+tag: dev
+
+postgres:
+  pvcSize: 100Mi
+
+broker:
+  pvcSize: 100Mi
+
+streamer:
+  replicaCount: 2
+  interval: 200ms
+
+collector:
+  replicaCount: 2
+
+api:
+  serviceType: NodePort
+  nodePort: 30080
